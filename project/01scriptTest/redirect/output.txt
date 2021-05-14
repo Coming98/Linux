@@ -1,0 +1,4 @@
+This is normal output
+Hello cjc, you are 22 year's old, you sex is man
+Hello zh, you are 21 year's old, you sex is woman
+Hello ltr, you are 22 year's old, you sex is man

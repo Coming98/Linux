@@ -1,0 +1,48 @@
+--- advancedTest.sh	2021-04-22 14:10:17.553360154 +0800
++++ advancedTest_.sh	2021-04-22 14:11:43.784453821 +0800
+@@ -2,18 +2,18 @@
+ 
+ var=1
+ 
+-if (( $var ** 3 == 1 ))
++if (( $var ** 4 == 1 ))
+ then
+     # (( var = var++ ))
+     (( var2 = var++ ))
+-    echo $var2
+     echo $var
++    echo $var2
+ else
+     echo "permission denies"
+ fi
+ 
+ echo "new line"
+-var=5
++var=6
+ if (( $var >= 10 || $var <= 5 ))
+ then
+     echo "var = $var"
+--- advancedTest.sh	2021-04-22 14:10:17.553360154 +0800
++++ advancedTest_.sh	2021-04-22 14:11:43.784453821 +0800
+@@ -2,18 +2,18 @@
+ 
+ var=1
+ 
+-if (( $var ** 3 == 1 ))
++if (( $var ** 4 == 1 ))
+ then
+     # (( var = var++ ))
+     (( var2 = var++ ))
+-    echo $var2
+     echo $var
++    echo $var2
+ else
+     echo "permission denies"
+ fi
+ 
+ echo "new line"
+-var=5
++var=6
+ if (( $var >= 10 || $var <= 5 ))
+ then
+     echo "var = $var"

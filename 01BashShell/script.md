@@ -881,9 +881,13 @@ renice -n 10 -p pid # 将进程 pid 的优先级改编为10
 
 ## 定时脚本
 
+### at
+
 `at` - 令允许指定Linux系统何时运行脚本 - 存在守护进程 `atd` 以后台模式运行，检查作业队列来运行作业
 
 该命令默认将 email 作为输出目标，因此最好在执行的命令上添加重定向
+
+限制：无法定期执行任务
 
 ~~~shell
 # at [ -f filename ] time
@@ -892,6 +896,190 @@ at -f test.sh now
 at -M -f test.sh now # 屏蔽作业产生的输出信息
 atq # 列出等待的作业 作业号 + 执行时间
 atrm 作业号 # 根据 atq 中的作业号删除
+~~~
+
+### cron
+
+原理：在后台运行并检查一个特殊的时间表
+
+命令格式：要运行的命令 或 脚本的全路径名 - `/home/cjc/run.txt > run.sh`
+
+时间表格式：`min hour dayofmonth month dayofweek command`
+
+~~~shell
+15 10 * * * command # 每天 10:15
+15 16 * * 1 command # 每周一 16:15
+# week - 0=周日 6=周六 - 或者使用 mon tue wed thu fri sat sun
+00 12 1 * * command # 每个月的第一天 12:00
+00 12 * * * if [`date +%d -d tomorrow` = 01 ] ; then ; command #最后一天
+~~~
+
+**管理命令**
+
+~~~shell
+crontal -l # 列出已有的cron时间表
+cron -e # 编辑时间表
+~~~
+
+**预设目录**：为了方便管理，cron 对精度要求不高的任务提供了四个预设执行方案 `在/etc/方案名/` 下 - hourly  daily  monthly  weekly
+
+劣势：cron 默认了 linux 系统是 7*24 小时运行的，因此如果任务到达执行时间但是系统处于关机状态，cron 就会忽略掉该任务的本次运行时，不会延时执行
+
+**可以使用 anacron 解决**
+
+## 使用新Shell
+
+Tips：每次启动新 shell 时，bash shell 都会运行 .bashrc 文件，因此想要为新的会话设置某些共有的工能，可以编辑 `.bashrc` 文件
+
+# 函数
+
+shell 中的函数是一个脚本代码块，为之命名后可以在其定义的下方通过 name 使用该函数
+
+Tips：函数名相同的两个函数会进行覆盖，不推荐以此作为功能点使得程序复杂化
+
+## 创建函数
+
+~~~shell
+# method 1
+function name {
+	commands
+}
+# method 2
+name() {
+	commands
+}
+~~~
+
+## 返回值
+
+默认情况下以最后一条命令的退出状态码作为返回值，但是之前命令的执行状态无法监控
+
+**return**：使用 return 命令可以自定义返回状态码，取值范围为 [0, 255]
+
+~~~shell
+function db1 {
+    read -p "Enter a value: " value
+    echo "doubling the value"
+    return $[ $value * 2 ]
+}
+db1
+echo "The new value is $?"
+~~~
+
+使用 echo 与 `$()` 将脚本的输出作为返回值赋予变量，也可以将其看做返回状态码
+
+~~~shell
+function db1 {
+    read -p "Enter a value: " value
+    echo $[ $value * 2]
+}
+
+result=$(db1)
+echo "The new value is $result"
+~~~
+
+**使用全局变量传递参数**
+
+~~~shell
+function multi2 {
+    value=$[ $value * 2 ]
+    result=$[ $value + 5 ]
+}
+
+read -p "input value: " value
+multi2
+echo "value = $value"
+echo "result = $result"
+~~~
+
+## 参数传递
+
+可以将函数看做小型脚本，因此可以像给脚本传递参数一样传递参数给函数
+
+`$0 - 函数名, $1, ... $9, ${10}, ..., $#	`
+
+## 函数中处理变量
+
+**全局变量**：无论函数内外，常规定义和使用的变量都为全局变量，函数内外都可以访问和修改，因此为了避免混乱，应明确区分何为全局，何为局部
+
+**局部变量**：函数内使用 `local` 定义或修饰的变量
+
+~~~shell
+local temp
+local temp=$[ $value + 5 ]
+~~~
+
+## 函数递归
+
+利用 函数 返回值的方法进行函数递归
+
+~~~shell
+#!/bin/bash
+function factorial {
+    if [ $1 -eq 1 ]
+    then
+        echo 1
+    else
+        local now=$[ $1 - 1]
+        local res=$( factorial $now )
+        echo $[ $res * $1 ]
+    fi
+}
+
+read -p "Enter value: " value
+result=$(factorial $value)
+echo "The factorial of $value is: $result"
+~~~
+
+## 自定义函数库
+
+1. 创建函数库文件：函数定义在其中
+
+2. 在其它脚本文件中包含目标函数库文件
+
+   **source** 命令会在当前 shell 上下文中执行目标命令，而非创建新 shell 执行
+
+   **source** 有一个简单的别名 - 点操作符 (dot operator)
+
+   ~~~shell
+   . ./myfuncs == source ./myfuncs
+   ~~~
+
+如果想在命令行中使用该函数，则可以利用 `~/.bashrc` 文件哦，更令我激动的是，父 shell 还会将定义好得函数传递给子 shell
+
+**Demo**
+
+~~~shell
+########################### myFuncs
+function addem {
+    echo $[ $1 + $2 ]
+}
+
+function multem {
+    echo $[ $1 * $2 ]
+}
+
+function divem {
+    if [ $2 -ne 0 ]
+    then
+        echo $[ $1 / $2 ]
+    else
+        echo -1
+    fi
+}
+########################### useMyFuncs.sh
+#!/bin/bash
+source ./myFuncs  # . ./myFuncs
+read -p "input var1: " var1
+read -p "input var2: " var2
+
+addemRes=$( addem $var1 $var2 )
+multemRes=$( multem $var1 $var2)
+divemRes=$( divem $var1 $var2 )
+
+echo "The result of adding them is: $addemRes"
+echo "The result of multiplying them is: $multemRes"
+echo "THe result of dividing them is: $divemRes"
 ~~~
 
 
@@ -915,5 +1103,7 @@ shell中运行的每个命令都使用退出状态码（exit status）告诉shel
 | 128+x  | 与Linux信号x相关的严重错误 |
 | 130    | Ctrl+C执行的终止           |
 | 255    | 正常范围之外的退出         |
+
+
 
 # END
